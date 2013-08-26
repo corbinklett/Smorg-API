@@ -5,10 +5,12 @@ require 'Slim/Slim.php';
 
 $app = new \Slim\Slim();
 
+/*
 $response = $app->response();
 $response->header('Access-Control-Allow-Origin','*');
 $response->header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
 $response->header('Access-Control-Request-Method', 'OPTIONS'); 
+*/
 
 $app->get('/login/:username/:password', 'getUser'); //for use with Login form
 $app->get('/login/:username', 'checkUsername'); //for use with Signup form
@@ -36,19 +38,38 @@ function getUser($user, $password) { //login by verifying user
 	$pass = $password;
 	$pass = sha1($salt1 . $password . $salt2);
 	$mysqli = getConnection();
-	$result = $mysqli->query("SELECT * FROM member WHERE user = '$user' and pass = '$pass'");
-	$member = $result->fetch_object();
-	echo json_encode($member);
-	$mysqli->close();
 
+	if($stmt = $mysqli->prepare("SELECT * FROM members WHERE user = ? and pass = ?")) {
+		/* Bind parameter s - string, b - blob, i - int, etc */
+		$stmt->bind_param("ss", $user, $pass);
+
+		/* Execute the statement */
+		$stmt->execute();
+
+		/* Bind results */
+		$stmt->bind_result($result);
+
+		/* Fetch the value */
+		$member = $stmt->fetch_object();
+
+		echo json_encode($member);
+		$stmt->close();
+		$mysqli->close();
+	}
 }
 
 function checkUsername($user) { //check username when signing up new member
 	$mysqli = getConnection();
-	$result = $mysqli->query("SELECT * FROM member WHERE user = '$user'");
-	$member = $result->fetch_object();
-	echo json_encode($member);
-	$mysqli->close();
+	if($stmt = $mysqli->prepare("SELECT * FROM members WHERE user = ?")) {
+		$stmt->bind_param("s", $user);
+		$stmt->execute();
+		$stmt->bind_result($result);
+		$member = $stmt->fetch_object();
+
+		echo json_encode($member);
+		$stmt->close();
+		$mysqli->close();
+	}
 }
 
 function addUser() { //save new member to database
@@ -262,15 +283,18 @@ function postActivity() {
 }
 
 function searchTag($tag) {
-	$sql = "select id_tag, tag_text from tag where tag_text like '$tag" . "%' limit 20";
 	$mysqli = getConnection();
-	$result = $mysqli->query($sql);
-	while($row = $result->fetch_assoc()) {
-		$rows[] = $row;
+	if($result = $mysqli->prepare("select id_tag, tag_text from tag where tag_text like ?' .'% limit 20")) {
+		$result->bind_param("s", $tag);
+		$result->execute();
+		$result=>bind_result($r);
+		while($row = $result->fetch_assoc()) {
+			$rows[] = $row;
+		}
+		echo json_encode($rows);
+		$result->close();
+		$mysqli->close();
 	}
-	echo json_encode($rows);
-	$mysqli->close();
-
 }
 
 function getSearchedActivities($array) {
