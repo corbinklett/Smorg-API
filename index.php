@@ -4,12 +4,12 @@ require 'Slim/Slim.php';
 \Slim\Slim::registerAutoloader();
 
 $app = new \Slim\Slim();
-
+/*
 $response = $app->response();
 $response->header('Access-Control-Allow-Origin','*');
 $response->header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
 $response->header('Access-Control-Request-Method', 'OPTIONS'); 
-
+*/
 $app->get('/login/:username/:password', 'getUser'); //for use with Login form
 $app->get('/login/:username', 'checkUsername'); //for use with Signup form
 $app->post('/login', 'addUser'); //for use with Signup form - add new user
@@ -51,7 +51,7 @@ function checkUsername($user) { //check username when signing up new member
 	$mysqli->close();
 }
 
-function addUser() { //save new member to database
+function addUser() { //save new member to database	
 	$salt1 = "$8!#"; $salt2 = "3@!27";
 	$app = \Slim\Slim::getInstance();
 	$request = $app->request();
@@ -60,8 +60,9 @@ function addUser() { //save new member to database
 	$mysqli = getConnection();
 	$sql = "INSERT INTO `member` (`user`, `pass`, `email`, `firstname`, `lastname`) VALUES ('$member->username', '$pass', '$member->email', '$member->firstname',  '$member->lastname')";
 	$result = $mysqli->query($sql);	
-	$id_member = $mysqli->insert_id;
-	echo json_encode($id_member); //echo the  previous inserted id 
+	$id_member = $mysqli->insert_id;	
+	$newmember['id_member'] = $id_member;	
+	echo json_encode($newmember); //echo the  previous inserted id 
 }
 
 function getUserInfo($id) { //get member info for profile page
