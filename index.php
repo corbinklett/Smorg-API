@@ -24,9 +24,11 @@ $app->get('/activity/:id', 'getFriendActivities'); //pass member ID to get frien
 $app->post('/favorites', 'saveFavorite'); //save activity ID to member's profile
 $app->get('/favorites/:id', 'getFavorites'); //query a user's favorite items
 $app->post('/post_activity', 'postActivity');
+$app->get('/search_friends/:current_user/:username', 'searchFriends'); //use with the "share" page to invite friends
 $app->get('/search_tag/:tag', 'searchTag');
 $app->get('/search_results/:array/:text', 'getSearchedActivities');
 $app->get('/upcoming/:id', 'getUpcoming'); //fetch upcoming events
+$app->get('/single_activity/:id', 'getSingleActivity'); //get activity id, title, and tags for one activity
 
 $app->run();
 
@@ -262,14 +264,29 @@ function postActivity() {
 	}
 }
 
+function searchFriends($current_user, $username) {
+	$sql = "select member.user, member.id_member from member where member.user like '$username%' and member.id_member in (select id_member_friend from friendship where id_member = $current_user)";	
+	$mysqli = getConnection();
+	$result = $mysqli->query($sql);
+	if ($result->num_rows > 0) {
+		while($row = $result->fetch_assoc()) {
+			$rows[] = $row;
+		}
+		echo json_encode($rows);
+	}
+	$mysqli->close();
+}
+
 function searchTag($tag) {
 	$sql = "select id_tag, tag_text from tag where tag_text like '$tag" . "%' limit 20";
 	$mysqli = getConnection();
 	$result = $mysqli->query($sql);
-	while($row = $result->fetch_assoc()) {
-		$rows[] = $row;
+	if( $result->num_rows > 0 ) {
+		while($row = $result->fetch_assoc()) {
+			$rows[] = $row;
+		}
+		echo json_encode($rows);
 	}
-	echo json_encode($rows);
 	$mysqli->close();
 
 }
@@ -322,6 +339,21 @@ function getUpcoming($id) {
 	$result->close();
 	$mysqli->close();
 }
+
+function getSingleActivity($id) {
+	$mysqli = getConnection();
+	$sql = "select activity.id_activity, activity.title, TagsTable.tag_text, TagsTable.id_tag from activity inner join (select tag.tag_text, tag.id_tag, goodfor.id_activity from tag inner join goodfor on tag.id_tag = goodfor.id_tag where goodfor.id_activity = $id) as TagsTable where activity.id_activity = $id";
+	$result = $mysqli->query($sql);
+
+	while($row = $result->fetch_assoc()) {
+		$rows[] = $row;
+	}
+	
+	echo json_encode($rows);
+	$result->close();
+	$mysqli->close();
+}
+
 
 function getConnection() {
 	$db_hostname = 'localhost';
